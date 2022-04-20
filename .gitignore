@@ -1,0 +1,9 @@
+/build/
+/coverage/
+/env/
+/lib/
+/coverage.json
+node_modules/
+yarn-error.log
+*.tgz
+.env

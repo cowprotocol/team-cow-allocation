@@ -33,6 +33,9 @@ contract AllocationModule {
     /// @dev Maps each address to its vesting position. An address can have at most a single vesting position.
     mapping(address => VestingPosition) public allocation;
 
+    /// @dev Maximum value that can be stored in the type uint32.00
+    uint256 private constant MAX_UINT_32 = (1 << (32)) - 1;
+
     /// @dev Thrown when creating a vesting position of zero duration.
     error DurationMustNotBeZero();
     /// @dev Thrown when creating a vesting position for an address that already has a vesting position.
@@ -196,8 +199,8 @@ contract AllocationModule {
 
         fullVestedAmount = computeClaimableAmount(
             start,
-            // Truncating will be valid until the year 2106.
-            uint32(timestampAtClaimingTime),
+            // Saturate the type conversion so that claims can be redeemed at any future point in time.
+            toUint32Saturating(timestampAtClaimingTime),
             end,
             totalAmount
         );
@@ -280,5 +283,14 @@ contract AllocationModule {
         if (!success) {
             revert RevertedCowTransfer();
         }
+    }
+
+    /// @dev Casts the input number to a uint32. If it doesn't fit the type, returns the maximum value that can be
+    /// stored in this type.
+    /// @param num The uint256 to convert.
+    /// @return The input number as a uint32 if it fits the type or the maximum value that can be stored in this type
+    /// otherwise.
+    function toUint32Saturating(uint256 num) private pure returns (uint32) {
+        return uint32(MAX_UINT_32 <= num ? MAX_UINT_32 : num);
     }
 }

@@ -18,6 +18,7 @@ import {
   VIRTUAL_COW_TOKEN,
   CONTRACT_NAME,
   buildEnableModuleTx,
+  addClaimInput,
 } from "../../src/ts";
 import { Operation } from "../../src/ts/lib/safe";
 import { customError } from "../lib/custom-errors";
@@ -150,12 +151,23 @@ describe("Mainnet: allocation module on team safe", () => {
     // Allocate claim to first employee.
     const durationOne = 400 * 24 * 3600; // 400 days
     const amountOne = utils.parseUnits("31337", 18);
-    await teamExecInModule("addClaim", [
-      employeeOne.address,
-      durationOne,
-      amountOne,
-    ]);
-    const startClaimOne = (await ethers.provider.getBlock("latest")).timestamp;
+    const startClaimOne =
+      (await ethers.provider.getBlock("latest")).timestamp + 31337;
+    await teamExecInModule(
+      "addClaim",
+      addClaimInput({
+        beneficiary: employeeOne.address,
+        start: startClaimOne,
+        duration: durationOne,
+        amount: amountOne,
+      }),
+    );
+
+    // Claims nothing before start
+    await setTimeAndMineBlock(startClaimOne - 1337);
+    expect(await allocationModule.callStatic.claimAllCow()).to.equal(
+      constants.AddressZero,
+    );
 
     // Employee one claims for the first time.
     await setTimeAndMineBlock(startClaimOne + durationOne / 8);
@@ -181,14 +193,17 @@ describe("Mainnet: allocation module on team safe", () => {
 
     // Add claim for second employee.
     const startClaimTwo = startClaimOne + durationOne / 4;
-    await setTime(startClaimTwo);
     const durationTwo = 200 * 24 * 3600; // 200 days (ends before claim one, at durationOne*3/4)
     const amountTwo = utils.parseUnits("1337", 18);
-    await teamExecInModule("addClaim", [
-      employeeTwo.address,
-      durationTwo,
-      amountTwo,
-    ]);
+    await teamExecInModule(
+      "addClaim",
+      addClaimInput({
+        beneficiary: employeeTwo.address,
+        start: startClaimTwo,
+        duration: durationTwo,
+        amount: amountTwo,
+      }),
+    );
 
     // Stop vesting for employee one.
     await setTime(startClaimOne + durationOne / 2);

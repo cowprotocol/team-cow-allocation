@@ -51,6 +51,7 @@ contract AllocationModule {
     /// @dev A new linear vesting position is added to the module.
     event ClaimAdded(
         address indexed beneficiary,
+        uint32 start,
         uint32 duration,
         uint96 amount
     );
@@ -79,6 +80,7 @@ contract AllocationModule {
     /// @param amount Amount of COW tokens that will be linearly vested to the beneficiary.
     function addClaim(
         address beneficiary,
+        uint32 start,
         uint32 duration,
         uint96 amount
     ) external onlyController {
@@ -88,16 +90,14 @@ contract AllocationModule {
         if (allocation[beneficiary].totalAmount != 0) {
             revert HasClaimAlready();
         }
-        // solhint-disable not-rely-on-time
         allocation[beneficiary] = VestingPosition({
             totalAmount: amount,
             claimedAmount: 0,
-            start: uint32(block.timestamp),
-            end: uint32(block.timestamp) + duration
+            start: start,
+            end: start + duration
         });
-        // solhint-enable not-rely-on-time
 
-        emit ClaimAdded(beneficiary, duration, amount);
+        emit ClaimAdded(beneficiary, start, duration, amount);
     }
 
     /// @dev Stops the claim of an address. It first claims the entire amount of COW allocated so far on behalf of the
@@ -215,6 +215,9 @@ contract AllocationModule {
         uint32 end,
         uint96 totalAmount
     ) internal pure returns (uint96) {
+        if (current <= start) {
+            return 0;
+        }
         uint32 currentVestingEnd = (current < end) ? current : end;
         return
             uint96(
@@ -242,8 +245,11 @@ contract AllocationModule {
         }
 
         allocation[beneficiary].claimedAmount = claimedAfterPayout;
-        swapVcow(claimedAmount);
-        transferCow(beneficiary, claimedAmount);
+
+        if (claimedAmount != 0) {
+            swapVcow(claimedAmount);
+            transferCow(beneficiary, claimedAmount);
+        }
 
         emit ClaimRedeemed(beneficiary, claimedAmount);
     }

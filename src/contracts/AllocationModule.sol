@@ -184,11 +184,11 @@ contract AllocationModule {
         returns (uint96 alreadyClaimedAmount, uint96 fullVestedAmount)
     {
         // Destructure caller position as gas efficiently as possible without assembly.
-        VestingPosition memory p = allocation[beneficiary];
-        uint96 totalAmount = p.totalAmount;
-        alreadyClaimedAmount = p.claimedAmount;
-        uint32 start = p.start;
-        uint32 end = p.end;
+        VestingPosition memory position = allocation[beneficiary];
+        uint96 totalAmount = position.totalAmount;
+        alreadyClaimedAmount = position.claimedAmount;
+        uint32 start = position.start;
+        uint32 end = position.end;
 
         if (totalAmount == 0) {
             revert NoClaimAssigned();
@@ -226,26 +226,26 @@ contract AllocationModule {
     /// @dev Takes the parameters of a vesting position from its input values and sends out the claimed COW to the
     /// beneficiary, taking care of updating the claimed amount.
     /// @param beneficiary The address that should receive the COW tokens.
-    /// @param claimedAmount The amount of COW that is claimed by the beneficiary.
+    /// @param amount The amount of COW that is claimed by the beneficiary.
     /// @param alreadyClaimedAmount The amount that has already been claimed by the beneficiary.
     /// @param fullVestedAmount The total amount of COW that has been vested so far, which includes the amount that
     /// was already claimed.
     function claimCowFromAmounts(
         address beneficiary,
-        uint96 claimedAmount,
+        uint96 amount,
         uint96 alreadyClaimedAmount,
         uint96 fullVestedAmount
     ) internal {
-        uint96 claimedAfterPayout = alreadyClaimedAmount + claimedAmount;
+        uint96 claimedAfterPayout = alreadyClaimedAmount + amount;
         if (claimedAfterPayout > fullVestedAmount) {
             revert NotEnoughVestedTokens();
         }
 
         allocation[beneficiary].claimedAmount = claimedAfterPayout;
-        swapVcow(claimedAmount);
-        transferCow(beneficiary, claimedAmount);
+        swapVcow(amount);
+        transferCow(beneficiary, amount);
 
-        emit ClaimRedeemed(beneficiary, claimedAmount);
+        emit ClaimRedeemed(beneficiary, amount);
     }
 
     /// @dev Swaps an exact amount of vCOW tokens that are held in the module controller in exchange for COW tokens. The

@@ -248,11 +248,8 @@ contract AllocationModule {
         }
 
         allocation[beneficiary].claimedAmount = claimedAfterPayout;
-
-        if (amount != 0) {
-            swapVcow(amount);
-            transferCow(beneficiary, amount);
-        }
+        swapVcow(amount);
+        transferCow(beneficiary, amount);
 
         emit ClaimRedeemed(beneficiary, amount);
     }

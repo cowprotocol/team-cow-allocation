@@ -478,6 +478,8 @@ describe("AllocationModule", () => {
 
     it("claims zero COW before the start", async function () {
       const { start: claimStart } = await requiredNewAllocation();
+      await requiredMockForSwapping(constants.Zero);
+      await requiredMockForTransferring(constants.Zero);
       await setTimeAndMineBlock(claimStart - 500);
       expect(
         await allocationModule.connect(claimant).callStatic.claimAllCow(),
@@ -549,6 +551,8 @@ describe("AllocationModule", () => {
 
       describe("does not revert", async function () {
         it("before the claim is redeemable", async function () {
+          await requiredMockForSwapping(constants.Zero);
+          await requiredMockForTransferring(constants.Zero);
           await setTime(claimStart - 500);
           await expect(
             allocationModule

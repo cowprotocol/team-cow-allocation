@@ -33,6 +33,9 @@ contract AllocationModule {
     /// @dev Maps each address to its vesting position. An address can have at most a single vesting position.
     mapping(address => VestingPosition) public allocation;
 
+    /// @dev Maximum value that can be stored in the type uint32.00
+    uint256 private constant MAX_UINT_32 = (1 << (32)) - 1;
+
     /// @dev Thrown when creating a vesting position of zero duration.
     error DurationMustNotBeZero();
     /// @dev Thrown when creating a vesting position for an address that already has a vesting position.
@@ -184,11 +187,11 @@ contract AllocationModule {
         returns (uint96 alreadyClaimedAmount, uint96 fullVestedAmount)
     {
         // Destructure caller position as gas efficiently as possible without assembly.
-        VestingPosition memory p = allocation[beneficiary];
-        uint96 totalAmount = p.totalAmount;
-        alreadyClaimedAmount = p.claimedAmount;
-        uint32 start = p.start;
-        uint32 end = p.end;
+        VestingPosition memory position = allocation[beneficiary];
+        uint96 totalAmount = position.totalAmount;
+        alreadyClaimedAmount = position.claimedAmount;
+        uint32 start = position.start;
+        uint32 end = position.end;
 
         if (totalAmount == 0) {
             revert NoClaimAssigned();
@@ -196,8 +199,8 @@ contract AllocationModule {
 
         fullVestedAmount = computeClaimableAmount(
             start,
-            // Truncating will be valid until the year 2106.
-            uint32(timestampAtClaimingTime),
+            // Saturate the type conversion so that claims can be redeemed at any future point in time.
+            toUint32Saturating(timestampAtClaimingTime),
             end,
             totalAmount
         );
@@ -229,29 +232,29 @@ contract AllocationModule {
     /// @dev Takes the parameters of a vesting position from its input values and sends out the claimed COW to the
     /// beneficiary, taking care of updating the claimed amount.
     /// @param beneficiary The address that should receive the COW tokens.
-    /// @param claimedAmount The amount of COW that is claimed by the beneficiary.
+    /// @param amount The amount of COW that is claimed by the beneficiary.
     /// @param alreadyClaimedAmount The amount that has already been claimed by the beneficiary.
     /// @param fullVestedAmount The total amount of COW that has been vested so far, which includes the amount that
     /// was already claimed.
     function claimCowFromAmounts(
         address beneficiary,
-        uint96 claimedAmount,
+        uint96 amount,
         uint96 alreadyClaimedAmount,
         uint96 fullVestedAmount
     ) internal {
-        uint96 claimedAfterPayout = alreadyClaimedAmount + claimedAmount;
+        uint96 claimedAfterPayout = alreadyClaimedAmount + amount;
         if (claimedAfterPayout > fullVestedAmount) {
             revert NotEnoughVestedTokens();
         }
 
         allocation[beneficiary].claimedAmount = claimedAfterPayout;
 
-        if (claimedAmount != 0) {
-            swapVcow(claimedAmount);
-            transferCow(beneficiary, claimedAmount);
+        if (amount != 0) {
+            swapVcow(amount);
+            transferCow(beneficiary, amount);
         }
 
-        emit ClaimRedeemed(beneficiary, claimedAmount);
+        emit ClaimRedeemed(beneficiary, amount);
     }
 
     /// @dev Swaps an exact amount of vCOW tokens that are held in the module controller in exchange for COW tokens. The
@@ -286,5 +289,14 @@ contract AllocationModule {
         if (!success) {
             revert RevertedCowTransfer();
         }
+    }
+
+    /// @dev Casts the input number to a uint32. If it doesn't fit the type, returns the maximum value that can be
+    /// stored in this type.
+    /// @param num The uint256 to convert.
+    /// @return The input number as a uint32 if it fits the type or the maximum value that can be stored in this type
+    /// otherwise.
+    function toUint32Saturating(uint256 num) private pure returns (uint32) {
+        return uint32(MAX_UINT_32 <= num ? MAX_UINT_32 : num);
     }
 }

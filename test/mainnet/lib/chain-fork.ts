@@ -1,5 +1,7 @@
 import { HardhatRuntimeEnvironment, HttpNetworkConfig } from "hardhat/types";
 
+import { createSnapshot, restoreSnapshot } from "../../lib/hardhat";
+
 // https://hardhat.org/hardhat-network/guides/mainnet-forking.html
 
 // Keep a snapshot of the state of the blockchain immediately after the fork.
@@ -24,10 +26,7 @@ export async function forkMainnet(hre: HardhatRuntimeEnvironment) {
       },
     ],
   });
-  snapshotFreshFork = await hre.network.provider.request({
-    method: "evm_snapshot",
-    params: [],
-  });
+  snapshotFreshFork = await createSnapshot(hre);
 }
 
 export async function stopMainnetFork(hre: HardhatRuntimeEnvironment) {
@@ -38,8 +37,5 @@ export async function stopMainnetFork(hre: HardhatRuntimeEnvironment) {
 }
 
 export async function resetMainnetFork(hre: HardhatRuntimeEnvironment) {
-  await hre.network.provider.request({
-    method: "evm_revert",
-    params: [snapshotFreshFork],
-  });
+  await restoreSnapshot(hre, snapshotFreshFork);
 }

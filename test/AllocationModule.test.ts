@@ -22,6 +22,7 @@ import {
 import { Operation } from "../src/ts/lib/safe";
 
 import { customError, RevertMessage } from "./lib/custom-errors";
+import { createSnapshot, restoreSnapshot } from "./lib/hardhat";
 import { setTime, setTimeAndMineBlock } from "./lib/time";
 
 const VCOW_ABI = [
@@ -414,6 +415,20 @@ describe("AllocationModule", () => {
             )
               .to.emit(allocationModule, "ClaimRedeemed")
               .withArgs(claimant.address, testedAmount);
+          });
+
+          it("can be redeemed if current timestamp does not fit a uint32", async function () {
+            // This test sets the network time to a very large value. We restore the snapshot to undo these changes.
+            const snapshot = await createSnapshot(hre);
+            await requiredMockForSwapping(amount);
+            await requiredMockForTransferring(amount);
+            await setTime(2 ** 32);
+            await expect(
+              allocationModule
+                .connect(claimant)
+                [claimFunction](...claimInputFromAmount(amount)),
+            ).not.to.be.reverted;
+            await restoreSnapshot(hre, snapshot);
           });
         });
       });

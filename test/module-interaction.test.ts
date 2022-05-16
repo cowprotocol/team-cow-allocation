@@ -54,19 +54,21 @@ describe("AllocationModule interaction with controller safe", () => {
   describe("claiming", function () {
     const amount = utils.parseUnits("100", 18);
     const duration = 1000;
-    let claimStart: number;
+    let start: number;
 
     beforeEach(async function () {
+      start = (await ethers.provider.getBlock("latest")).timestamp + 31337;
+
       await execSafeTransaction(
         controller,
         await buildAddClaimTransaction(allocationModule, {
           amount,
+          start,
           duration,
           beneficiary: claimant.address,
         }),
         [owner],
       );
-      claimStart = (await ethers.provider.getBlock("latest")).timestamp;
     });
 
     function requiredMockForSwapping(amount: BigNumberish) {
@@ -80,13 +82,13 @@ describe("AllocationModule interaction with controller safe", () => {
       const testedAmount = amount.div(4);
       await requiredMockForSwapping(testedAmount);
       await requiredMockForTransferring(testedAmount);
-      await setTime(claimStart + duration / 4);
+      await setTime(start + duration / 4);
       await expect(allocationModule.connect(claimant).claimAllCow()).not.to.be
         .reverted;
     });
 
     it("swaps vCOW to COW", async function () {
-      await setTime(claimStart + duration / 4);
+      await setTime(start + duration / 4);
       // Reverts because the swap mock is triggered but not initialized.
       await expect(
         allocationModule.connect(claimant).claimAllCow(),
@@ -97,7 +99,7 @@ describe("AllocationModule interaction with controller safe", () => {
       const testedAmount = amount.div(4);
       await requiredMockForSwapping(testedAmount);
       // Reverts because the transfer mock is triggered but not initialized.
-      await setTime(claimStart + duration / 4);
+      await setTime(start + duration / 4);
       await expect(
         allocationModule.connect(claimant).claimAllCow(),
       ).to.be.revertedWith("RevertedCowTransfer");

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-or-later
 pragma solidity ^0.8;
 
-import "@cowprotocol/token/src/contracts/CowProtocolToken.sol";
-import "@cowprotocol/token/src/contracts/CowProtocolVirtualToken.sol";
+import "./interface/CowProtocolTokens.sol";
 import "./vendored/Enum.sol";
 import "./vendored/ModuleController.sol";
 

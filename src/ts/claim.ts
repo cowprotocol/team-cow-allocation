@@ -12,16 +12,18 @@ export interface VestingPosition {
 
 export interface AddClaimInput {
   beneficiary: string;
+  start: number;
   duration: number;
   amount: BigNumberish;
 }
 
 export function addClaimInput({
   beneficiary,
+  start,
   duration,
   amount,
 }: AddClaimInput): unknown[] {
-  return [beneficiary, duration, amount];
+  return [beneficiary, start, duration, amount];
 }
 
 export function buildAddClaimTransaction(

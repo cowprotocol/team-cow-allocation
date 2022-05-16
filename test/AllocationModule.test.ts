@@ -83,7 +83,7 @@ describe("AllocationModule", () => {
   it("has only known public functions acting on the state", async function () {
     const { functions } = AllocationModuleFactory.interface;
     const knownPublicFunctions = [
-      "addClaim(address,uint32,uint96)",
+      "addClaim(address,uint32,uint32,uint96)",
       "stopClaim(address)",
       "claimAllCow()",
       "claimCow(uint96)",
@@ -112,39 +112,38 @@ describe("AllocationModule", () => {
 
   describe("addClaim", function () {
     const beneficiary = "0x" + "42".repeat(20);
+    const start = 31337;
     const duration = 1337;
     const amount = utils.parseUnits("42", 18);
 
     it("creates a new vesting position", async function () {
       await allocationModule
         .connect(controller.signer)
-        .addClaim(...addClaimInput({ beneficiary, duration, amount }));
-
-      const timestamp = (await ethers.provider.getBlock("latest")).timestamp;
+        .addClaim(...addClaimInput({ beneficiary, start, duration, amount }));
 
       const vestingPosition: VestingPosition =
         await allocationModule.allocation(beneficiary);
       expect(vestingPosition.totalAmount).to.equal(amount);
       expect(vestingPosition.claimedAmount).to.equal(constants.Zero);
-      expect(vestingPosition.start).to.equal(timestamp);
-      expect(vestingPosition.end).to.equal(timestamp + duration);
+      expect(vestingPosition.start).to.equal(start);
+      expect(vestingPosition.end).to.equal(start + duration);
     });
 
     it("emits event", async function () {
       await expect(
         allocationModule
           .connect(controller.signer)
-          .addClaim(...addClaimInput({ beneficiary, duration, amount })),
+          .addClaim(...addClaimInput({ beneficiary, start, duration, amount })),
       )
         .to.emit(allocationModule, "ClaimAdded")
-        .withArgs(beneficiary, duration, amount);
+        .withArgs(beneficiary, start, duration, amount);
     });
 
     it("reverts if not sent by controller", async function () {
       await expect(
         allocationModule
           .connect(defaultWallet)
-          .addClaim(...addClaimInput({ beneficiary, duration, amount })),
+          .addClaim(...addClaimInput({ beneficiary, start, duration, amount })),
       ).to.be.revertedWith(customError("NotAController"));
     });
 
@@ -152,19 +151,21 @@ describe("AllocationModule", () => {
       await expect(
         allocationModule
           .connect(controller.signer)
-          .addClaim(...addClaimInput({ beneficiary, duration: 0, amount })),
+          .addClaim(
+            ...addClaimInput({ beneficiary, start, duration: 0, amount }),
+          ),
       ).to.be.revertedWith(customError("DurationMustNotBeZero"));
     });
 
     it("reverts if beneficiary already has a claim", async function () {
       await allocationModule
         .connect(controller.signer)
-        .addClaim(...addClaimInput({ beneficiary, duration, amount }));
+        .addClaim(...addClaimInput({ beneficiary, start, duration, amount }));
 
       await expect(
         allocationModule
           .connect(controller.signer)
-          .addClaim(...addClaimInput({ beneficiary, duration, amount })),
+          .addClaim(...addClaimInput({ beneficiary, start, duration, amount })),
       ).to.be.revertedWith(customError("HasClaimAlready"));
     });
   });
@@ -172,14 +173,20 @@ describe("AllocationModule", () => {
   const amount = utils.parseUnits("100", 18);
   const duration = 1000;
 
-  function requiredNewAllocation() {
-    return allocationModule.connect(controller.signer).addClaim(
+  async function requiredNewAllocation() {
+    const timestamp = (await ethers.provider.getBlock("latest")).timestamp;
+    const start = timestamp + 1337;
+
+    await allocationModule.connect(controller.signer).addClaim(
       ...addClaimInput({
         beneficiary: claimant.address,
+        start,
         duration,
         amount,
       }),
     );
+
+    return { start };
   }
   function requiredMockForSwapping(amount: BigNumberish) {
     return controller.contract.mock.execTransactionFromModule
@@ -221,8 +228,7 @@ describe("AllocationModule", () => {
         let claimStart: number;
 
         beforeEach(async function () {
-          await requiredNewAllocation();
-          claimStart = (await ethers.provider.getBlock("latest")).timestamp;
+          ({ start: claimStart } = await requiredNewAllocation());
         });
 
         describe("reverts if swapping vCOW to COW reverts", function () {
@@ -426,6 +432,33 @@ describe("AllocationModule", () => {
           });
         });
       });
+
+      describe("with an added claim that has already started", function () {
+        it("accounts for the already vested time", async function () {
+          const timestamp = (await ethers.provider.getBlock("latest"))
+            .timestamp;
+          const start = timestamp - duration / 4;
+          await allocationModule.connect(controller.signer).addClaim(
+            ...addClaimInput({
+              beneficiary: claimant.address,
+              start,
+              duration,
+              amount,
+            }),
+          );
+
+          const testedAmount = amount.div(2);
+          await requiredMockForSwapping(testedAmount);
+          await requiredMockForTransferring(testedAmount);
+          await setTime(timestamp + duration / 4);
+          // Note: if the computed amount was incorrect, the mocks above would not be set correctly.
+          await expect(
+            allocationModule
+              .connect(claimant)
+              [claimFunction](...claimInputFromAmount(testedAmount)),
+          ).not.to.be.reverted;
+        });
+      });
     });
   }
 
@@ -433,18 +466,26 @@ describe("AllocationModule", () => {
     testClaimFunction("claimAllCow");
 
     it("returns the claimed amount", async function () {
-      await requiredNewAllocation();
-      const claimStart = (await ethers.provider.getBlock("latest")).timestamp;
-
+      const { start: claimStart } = await requiredNewAllocation();
       const testedAmount = amount.div(2);
       await requiredMockForSwapping(testedAmount);
       await requiredMockForTransferring(testedAmount);
       await setTimeAndMineBlock(claimStart + duration / 2);
       expect(
-        await allocationModule
-          .connect(claimant.address)
-          .callStatic.claimAllCow(),
+        await allocationModule.connect(claimant).callStatic.claimAllCow(),
       ).to.equal(testedAmount);
+    });
+
+    it("claims zero COW before the start", async function () {
+      const { start: claimStart } = await requiredNewAllocation();
+      await requiredMockForSwapping(constants.Zero);
+      await requiredMockForTransferring(constants.Zero);
+      await setTimeAndMineBlock(claimStart - 500);
+      expect(
+        await allocationModule.connect(claimant).callStatic.claimAllCow(),
+      ).to.equal(constants.Zero);
+      await expect(allocationModule.connect(claimant).claimAllCow()).not.to.be
+        .reverted;
     });
   });
 
@@ -452,9 +493,7 @@ describe("AllocationModule", () => {
     testClaimFunction("claimCow");
 
     it("can be used with less than the maximum allowed amount", async function () {
-      await requiredNewAllocation();
-      const claimStart = (await ethers.provider.getBlock("latest")).timestamp;
-
+      const { start: claimStart } = await requiredNewAllocation();
       const testedAmount = 1;
       await requiredMockForSwapping(testedAmount);
       await requiredMockForTransferring(testedAmount);
@@ -464,12 +503,8 @@ describe("AllocationModule", () => {
     });
 
     it("reverts if claiming more than the maximum allowed amount in the vesting period", async function () {
-      await requiredNewAllocation();
-      const claimStart = (await ethers.provider.getBlock("latest")).timestamp;
-
+      const { start: claimStart } = await requiredNewAllocation();
       const testedAmount = amount.div(2).add(1);
-      await requiredMockForSwapping(testedAmount);
-      await requiredMockForTransferring(testedAmount);
       await setTime(claimStart + duration / 2);
       await expect(
         allocationModule.connect(claimant).claimCow(testedAmount),
@@ -477,13 +512,18 @@ describe("AllocationModule", () => {
     });
 
     it("reverts if claiming more than the maximum allowed amount after the vesting period", async function () {
-      await requiredNewAllocation();
-      const claimStart = (await ethers.provider.getBlock("latest")).timestamp;
-
+      const { start: claimStart } = await requiredNewAllocation();
       const testedAmount = amount.add(1);
-      await requiredMockForSwapping(testedAmount);
-      await requiredMockForTransferring(testedAmount);
       await setTime(claimStart + 2 * duration);
+      await expect(
+        allocationModule.connect(claimant).claimCow(testedAmount),
+      ).to.be.revertedWith(customError("NotEnoughVestedTokens"));
+    });
+
+    it("reverts if claiming a nonzero amount before the start of the vesting period", async function () {
+      const { start: claimStart } = await requiredNewAllocation();
+      const testedAmount = constants.One;
+      await setTime(claimStart - 500);
       await expect(
         allocationModule.connect(claimant).claimCow(testedAmount),
       ).to.be.revertedWith(customError("NotEnoughVestedTokens"));
@@ -506,20 +546,32 @@ describe("AllocationModule", () => {
     describe("with valid claim", function () {
       let claimStart: number;
       beforeEach(async function () {
-        await requiredNewAllocation();
-        claimStart = (await ethers.provider.getBlock("latest")).timestamp;
+        ({ start: claimStart } = await requiredNewAllocation());
       });
 
-      it("does not revert", async function () {
-        const testedAmount = amount.div(2);
-        await requiredMockForSwapping(testedAmount);
-        await requiredMockForTransferring(testedAmount);
-        await setTime(claimStart + duration / 2);
-        await expect(
-          allocationModule
-            .connect(controller.signer)
-            .stopClaim(claimant.address),
-        ).not.to.be.reverted;
+      describe("does not revert", async function () {
+        it("before the claim is redeemable", async function () {
+          await requiredMockForSwapping(constants.Zero);
+          await requiredMockForTransferring(constants.Zero);
+          await setTime(claimStart - 500);
+          await expect(
+            allocationModule
+              .connect(controller.signer)
+              .stopClaim(claimant.address),
+          ).not.to.be.reverted;
+        });
+
+        it("after the claim is redeemable", async function () {
+          const testedAmount = amount.div(2);
+          await requiredMockForSwapping(testedAmount);
+          await requiredMockForTransferring(testedAmount);
+          await setTime(claimStart + duration / 2);
+          await expect(
+            allocationModule
+              .connect(controller.signer)
+              .stopClaim(claimant.address),
+          ).not.to.be.reverted;
+        });
       });
 
       it("deletes the vesting", async function () {

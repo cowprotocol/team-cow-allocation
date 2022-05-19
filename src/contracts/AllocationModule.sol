@@ -148,6 +148,23 @@ contract AllocationModule {
         );
     }
 
+    /// @dev Returns how many COW tokens are claimable at the current point in time by the given address. Tokens that
+    /// were already claimed by the user are not included in the output amount.
+    /// @param beneficiary The address that owns the claim.
+    /// @return The amount of COW that could be claimed by the beneficiary at this point in time.
+    function claimableCow(address beneficiary) external view returns (uint256) {
+        if (allocation[beneficiary].totalAmount == 0) {
+            return 0;
+        }
+        (uint96 alreadyClaimedAmount, uint96 fullVestedAmount) = retrieveClaimedAmounts(
+            beneficiary,
+            // solhint-disable-next-line not-rely-on-time
+            block.timestamp
+        );
+
+        return fullVestedAmount - alreadyClaimedAmount;
+    }
+
     /// @dev Computes and sends the entire amount of COW that have been vested so far to the beneficiary.
     /// @param beneficiary The address that redeems its claim.
     /// @param timestampAtClaimingTime The timestamp at claiming time.

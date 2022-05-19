@@ -636,4 +636,56 @@ describe("AllocationModule", () => {
       });
     });
   });
+
+  describe("claimableCow", function () {
+    it("returns zero if beneficiary has no claim", async function () {
+      expect(
+        await allocationModule.claimableCow("0x" + "42".repeat(20)),
+      ).to.equal(constants.Zero);
+    });
+
+    it("is consistent with claimAllCow", async function () {
+      const { start } = await requiredNewAllocation();
+      const claimableCow = amount.div(4);
+      await requiredMockForSwapping(claimableCow);
+      await requiredMockForTransferring(claimableCow);
+      await setTimeAndMineBlock(start + duration / 4);
+      const claimedCow = await allocationModule
+        .connect(claimant)
+        .callStatic.claimAllCow();
+      expect(claimedCow).to.equal(claimableCow);
+      expect(await allocationModule.claimableCow(claimant.address)).to.equal(
+        claimableCow,
+      );
+    });
+
+    it("returns claimable amount if user didn't claim before", async function () {
+      const { start } = await requiredNewAllocation();
+      await setTimeAndMineBlock(start + duration / 4);
+      expect(await allocationModule.claimableCow(claimant.address)).to.equal(
+        amount.div(4),
+      );
+    });
+
+    it("accounts for previous claims", async function () {
+      const { start } = await requiredNewAllocation();
+      const userClaimedAmount = amount.div(8);
+      await requiredMockForSwapping(userClaimedAmount);
+      await requiredMockForTransferring(userClaimedAmount);
+      await setTime(start + duration / 8);
+      await allocationModule.connect(claimant).claimAllCow();
+      await setTimeAndMineBlock(start + (duration * 3) / 8);
+      expect(await allocationModule.claimableCow(claimant.address)).to.equal(
+        amount.mul(3).div(8).sub(userClaimedAmount),
+      );
+    });
+
+    it("caps max amount", async function () {
+      const { start } = await requiredNewAllocation();
+      await setTimeAndMineBlock(start + 2 * duration);
+      expect(await allocationModule.claimableCow(claimant.address)).to.equal(
+        amount,
+      );
+    });
+  });
 });

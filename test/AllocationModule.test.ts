@@ -249,7 +249,7 @@ describe("AllocationModule", () => {
           ).not.to.be.reverted;
         });
 
-        it("sends out COW even if if swapping vCOW to COW reverts at vCOW level", async function () {
+        it("sends out COW even if swapping vCOW to COW reverts at vCOW level", async function () {
           // Transfer mock is missing. We verify it's used by checking that not setting the mock makes the transaction
           // revert.
           await controller.contract.mock.execTransactionFromModule

@@ -47,8 +47,6 @@ contract AllocationModule {
     error NotEnoughVestedTokens();
     /// @dev Thrown when the transfer of COW tokens did not succeed.
     error RevertedCowTransfer();
-    /// @dev Thrown when swapping vCOW to COW if not enough vCOW are available in the controller safe.
-    error RevertedVcowSwap();
 
     /// @dev A new linear vesting position is added to the module.
     event ClaimAdded(
@@ -109,10 +107,10 @@ contract AllocationModule {
         // Note: claiming COW might fail, therefore making it impossible to stop the claim. This is not considered an
         // issue as a claiming failure can only occur in the following cases:
         // 1. No claim is available: then nothing needs to be stopped.
-        // 2. Swapping vCOW to COW reverts. This can currently only happen if no vCOW tokens are available in the
-        // controller. However, in this case the module will become unusable for any future claim as vCOWs cannot be
-        // created. TODO: revisit this assumption if we change how vCOWs are claimed following discussion with legal.
-        // 3. The COW transfer reverts. This should not happen as there are always funds available after a swap.
+        // 2. This module is no longer enabled in the controller.
+        // 3. The COW transfer reverts. This means that there weren't enough vCOW tokens to swap for COW and that there
+        // aren't enough COW tokens available in the controller. Sending COW tokens to pay out the remaining claim would
+        // allow to stop the claim.
         // 4. Math failures (overflow/underflows). No untrusted value is provided to this function, so this is not
         // expected to happen.
         // solhint-disable-next-line not-rely-on-time
@@ -264,28 +262,28 @@ contract AllocationModule {
         }
 
         allocation[beneficiary].claimedAmount = claimedAfterPayout;
-        swapVcow(amount);
+        swapVcowIfAvailable(amount);
         transferCow(beneficiary, amount);
 
         emit ClaimRedeemed(beneficiary, amount);
     }
 
     /// @dev Swaps an exact amount of vCOW tokens that are held in the module controller in exchange for COW tokens. The
-    /// COW tokens are left in the module controller. Reverts if swapping is not possible.
-    /// Note: if all vCOWs have already been claimed by the controller, then it won't be possible to claim from this
-    /// contract anymore even if the controller were to have enough COW to pay for the claim.
-    /// TODO: discuss with legal if this step is required.
+    /// COW tokens are left in the module controller. If swapping reverts (which means that not enough vCOW are
+    /// available) then the failure is ignored.
     /// @param amount The amount of vCOW to swap.
-    function swapVcow(uint256 amount) internal {
-        bool success = controller.execTransactionFromModule(
+    function swapVcowIfAvailable(uint256 amount) internal {
+        // The success status is explicitely ignored. This means that the call to `swap` could revert without reverting
+        // the execution of this function. Note that this function can still revert if the call to
+        // `execTransactionFromModule` reverts, which could happen for example if this module is no longer enabled in
+        // the controller.
+        //bool success =
+        controller.execTransactionFromModule(
             address(vcow),
             0,
             abi.encodeWithSelector(vcow.swap.selector, amount),
             Enum.Operation.Call
         );
-        if (!success) {
-            revert RevertedVcowSwap();
-        }
     }
 
     /// @dev Transfer the specified exact amount of COW tokens that are held in the module controller to the target.

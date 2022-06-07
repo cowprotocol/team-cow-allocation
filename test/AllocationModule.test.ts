@@ -259,13 +259,13 @@ describe("AllocationModule", () => {
               vcowIface.encodeFunctionData("swap", [amount.div(2)]),
               Operation.Call,
             )
-            .reverts();
+            .returns(false);
           await setTime(claimStart + duration / 2);
           await expect(
             allocationModule
               .connect(claimant)
               [claimFunction](...claimInputFromAmount(amount.div(2))),
-          ).to.be.revertedWith(RevertMessage.MockRevert);
+          ).to.be.revertedWith(RevertMessage.UninitializedMock);
         });
 
         it("reverts if swapping vCOW to COW reverts at the controller level", async function () {

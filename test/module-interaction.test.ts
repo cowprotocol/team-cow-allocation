@@ -13,11 +13,6 @@ import {
 import { execSafeTransaction, GnosisSafeManager } from "./lib/safe";
 import { setTime } from "./lib/time";
 
-const VCOW_ABI = [
-  "function cowToken() public returns (address)",
-  "function swap(uint256) external",
-];
-
 const [, deployer, owner, claimant] = waffle.provider.getWallets();
 
 describe("AllocationModule interaction with controller safe", () => {
@@ -33,8 +28,10 @@ describe("AllocationModule interaction with controller safe", () => {
 
     controller = await safeManager.newSafe([owner.address], 1);
     cow = await waffle.deployMockContract(deployer, IERC20.abi);
-    vcow = await waffle.deployMockContract(deployer, VCOW_ABI);
-    await vcow.mock.cowToken.returns(cow.address);
+    const Vcow = (await ethers.getContractFactory("MockVcow")).connect(
+      deployer,
+    );
+    vcow = await Vcow.deploy(cow.address);
 
     AllocationModuleFactory = await ethers.getContractFactory(CONTRACT_NAME);
     allocationModule = await AllocationModuleFactory.deploy(
@@ -71,16 +68,12 @@ describe("AllocationModule interaction with controller safe", () => {
       );
     });
 
-    function requiredMockForSwapping(amount: BigNumberish) {
-      return vcow.mock.swap.withArgs(amount).returns();
-    }
     function requiredMockForTransferring(amount: BigNumberish) {
       return cow.mock.transfer.withArgs(claimant.address, amount).returns(true);
     }
 
     it("does not revert", async function () {
       const testedAmount = amount.div(4);
-      await requiredMockForSwapping(testedAmount);
       await requiredMockForTransferring(testedAmount);
       await setTime(start + duration / 4);
       await expect(allocationModule.connect(claimant).claimAllCow()).not.to.be
@@ -88,16 +81,15 @@ describe("AllocationModule interaction with controller safe", () => {
     });
 
     it("swaps vCOW to COW", async function () {
+      const testedAmount = amount.div(4);
+      await requiredMockForTransferring(testedAmount);
       await setTime(start + duration / 4);
-      // Reverts because the swap mock is triggered but not initialized.
-      await expect(
-        allocationModule.connect(claimant).claimAllCow(),
-      ).to.be.revertedWith("RevertedVcowSwap");
+      await expect(allocationModule.connect(claimant).claimAllCow())
+        .to.emit(vcow, "Swapped")
+        .withArgs(controller.address, testedAmount);
     });
 
     it("transfers COW to beneficiary", async function () {
-      const testedAmount = amount.div(4);
-      await requiredMockForSwapping(testedAmount);
       // Reverts because the transfer mock is triggered but not initialized.
       await setTime(start + duration / 4);
       await expect(

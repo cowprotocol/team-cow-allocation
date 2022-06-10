@@ -231,40 +231,59 @@ describe("AllocationModule", () => {
           ({ start: claimStart } = await requiredNewAllocation());
         });
 
-        describe("reverts if swapping vCOW to COW reverts", function () {
-          it("at vCOW level", async function () {
-            await controller.contract.mock.execTransactionFromModule
-              .withArgs(
-                vcow.address,
-                0,
-                vcowIface.encodeFunctionData("swap", [amount.div(2)]),
-                Operation.Call,
-              )
-              .returns(false);
-            await setTime(claimStart + duration / 2);
-            await expect(
-              allocationModule
-                .connect(claimant)
-                [claimFunction](...claimInputFromAmount(amount.div(2))),
-            ).to.be.revertedWith(customError("RevertedVcowSwap"));
-          });
+        it("does not revert if swapping vCOW to COW reverts at vCOW level", async function () {
+          await controller.contract.mock.execTransactionFromModule
+            .withArgs(
+              vcow.address,
+              0,
+              vcowIface.encodeFunctionData("swap", [amount.div(2)]),
+              Operation.Call,
+            )
+            .returns(false);
+          await requiredMockForTransferring(amount.div(2));
+          await setTime(claimStart + duration / 2);
+          await expect(
+            allocationModule
+              .connect(claimant)
+              [claimFunction](...claimInputFromAmount(amount.div(2))),
+          ).not.to.be.reverted;
+        });
 
-          it("at the controller level", async function () {
-            await controller.contract.mock.execTransactionFromModule
-              .withArgs(
-                vcow.address,
-                0,
-                vcowIface.encodeFunctionData("swap", [amount.div(2)]),
-                Operation.Call,
-              )
-              .reverts();
-            await setTime(claimStart + duration / 2);
-            await expect(
-              allocationModule
-                .connect(claimant)
-                [claimFunction](...claimInputFromAmount(amount.div(2))),
-            ).to.be.revertedWith(RevertMessage.MockRevert);
-          });
+        it("sends out COW even if swapping vCOW to COW reverts at vCOW level", async function () {
+          // Transfer mock is missing. We verify it's used by checking that not setting the mock makes the transaction
+          // revert.
+          await controller.contract.mock.execTransactionFromModule
+            .withArgs(
+              vcow.address,
+              0,
+              vcowIface.encodeFunctionData("swap", [amount.div(2)]),
+              Operation.Call,
+            )
+            .returns(false);
+          await setTime(claimStart + duration / 2);
+          await expect(
+            allocationModule
+              .connect(claimant)
+              [claimFunction](...claimInputFromAmount(amount.div(2))),
+          ).to.be.revertedWith(RevertMessage.UninitializedMock);
+        });
+
+        it("reverts if swapping vCOW to COW reverts at the controller level", async function () {
+          await controller.contract.mock.execTransactionFromModule
+            .withArgs(
+              vcow.address,
+              0,
+              vcowIface.encodeFunctionData("swap", [amount.div(2)]),
+              Operation.Call,
+            )
+            .reverts();
+          await requiredMockForTransferring(amount.div(2));
+          await setTime(claimStart + duration / 2);
+          await expect(
+            allocationModule
+              .connect(claimant)
+              [claimFunction](...claimInputFromAmount(amount.div(2))),
+          ).to.be.revertedWith(RevertMessage.MockRevert);
         });
 
         describe("reverts if transferring COW reverts", function () {

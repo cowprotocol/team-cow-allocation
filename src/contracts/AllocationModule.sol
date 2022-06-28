@@ -19,8 +19,8 @@ contract AllocationModule {
         uint96 claimedAmount;
         /// @dev Timestamp when this vesting position started.
         uint32 start;
-        /// @dev Timestamp when this vesting position ends.
-        uint32 end;
+        /// @dev How long after vesting start must be waited before claiming the total amount.
+        uint32 duration;
     }
 
     /// @dev Gnosis Safe that will enable this module. Its vCOW claims will be used to pay out each target address.
@@ -94,7 +94,7 @@ contract AllocationModule {
             totalAmount: amount,
             claimedAmount: 0,
             start: start,
-            end: start + duration
+            duration: duration
         });
 
         emit ClaimAdded(beneficiary, start, duration, amount);
@@ -205,7 +205,7 @@ contract AllocationModule {
         uint96 totalAmount = position.totalAmount;
         alreadyClaimedAmount = position.claimedAmount;
         uint32 start = position.start;
-        uint32 end = position.end;
+        uint32 duration = position.duration;
 
         if (totalAmount == 0) {
             revert NoClaimAssigned();
@@ -213,9 +213,8 @@ contract AllocationModule {
 
         fullVestedAmount = computeClaimableAmount(
             start,
-            // Saturate the type conversion so that claims can be redeemed at any future point in time.
-            toUint32Saturating(timestampAtClaimingTime),
-            end,
+            timestampAtClaimingTime,
+            duration,
             totalAmount
         );
     }
@@ -223,24 +222,23 @@ contract AllocationModule {
     /// Given the parameters of a vesting position, computes how much of the total amount has been vested so far.
     /// @param start Timestamp when the vesting position was started.
     /// @param current Timestamp of the point in time when the vested amount should be computed.
-    /// @param end Timestamp when the vesting position has ended or will end.
+    /// @param duration How long it takes for this vesting position to be fully vested.
     /// @param totalAmount The total amount that is being vested.
     /// @return The amount that has been vested at the specified point in time.
     function computeClaimableAmount(
         uint32 start,
-        uint32 current,
-        uint32 end,
+        uint256 current,
+        uint32 duration,
         uint96 totalAmount
     ) internal pure returns (uint96) {
         if (current <= start) {
             return 0;
         }
-        uint32 currentVestingEnd = (current < end) ? current : end;
-        return
-            uint96(
-                (uint256(totalAmount) * (currentVestingEnd - start)) /
-                    (end - start)
-            );
+        uint256 elapsedTime = current - start;
+        uint256 elapsedVestingTime = (elapsedTime <= duration)
+            ? elapsedTime
+            : duration;
+        return uint96((uint256(totalAmount) * elapsedVestingTime) / duration);
     }
 
     /// @dev Takes the parameters of a vesting position from its input values and sends out the claimed COW to the
@@ -300,14 +298,5 @@ contract AllocationModule {
         if (!success) {
             revert RevertedCowTransfer();
         }
-    }
-
-    /// @dev Casts the input number to a uint32. If it doesn't fit the type, returns the maximum value that can be
-    /// stored in this type.
-    /// @param num The uint256 to convert.
-    /// @return The input number as a uint32 if it fits the type or the maximum value that can be stored in this type
-    /// otherwise.
-    function toUint32Saturating(uint256 num) private pure returns (uint32) {
-        return uint32(MAX_UINT_32 <= num ? MAX_UINT_32 : num);
     }
 }

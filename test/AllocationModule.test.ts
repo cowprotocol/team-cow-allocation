@@ -126,7 +126,7 @@ describe("AllocationModule", () => {
       expect(vestingPosition.totalAmount).to.equal(amount);
       expect(vestingPosition.claimedAmount).to.equal(constants.Zero);
       expect(vestingPosition.start).to.equal(start);
-      expect(vestingPosition.end).to.equal(start + duration);
+      expect(vestingPosition.duration).to.equal(duration);
     });
 
     it("emits event", async function () {

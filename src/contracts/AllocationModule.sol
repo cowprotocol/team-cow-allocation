@@ -235,10 +235,10 @@ contract AllocationModule {
             return 0;
         }
         uint256 elapsedTime = current - start;
-        uint256 elapsedVestingTime = (elapsedTime <= duration)
-            ? elapsedTime
-            : duration;
-        return uint96((uint256(totalAmount) * elapsedVestingTime) / duration);
+        if (elapsedTime >= duration) {
+            return totalAmount;
+        }
+        return uint96((uint256(totalAmount) * elapsedTime) / duration);
     }
 
     /// @dev Takes the parameters of a vesting position from its input values and sends out the claimed COW to the

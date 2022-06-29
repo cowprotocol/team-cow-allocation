@@ -24,11 +24,11 @@ contract AllocationModule {
     }
 
     /// @dev Gnosis Safe that will enable this module. Its vCOW claims will be used to pay out each target address.
-    ModuleController public controller;
+    ModuleController public immutable controller;
     /// @dev The COW token.
-    CowProtocolToken public cow;
+    CowProtocolToken public immutable cow;
     /// @dev The virtual COW token.
-    CowProtocolVirtualToken public vcow;
+    CowProtocolVirtualToken public immutable vcow;
     /// @dev Maps each address to its vesting position. An address can have at most a single vesting position.
     mapping(address => VestingPosition) public allocation;
 

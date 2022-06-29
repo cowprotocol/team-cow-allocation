@@ -7,7 +7,7 @@ export interface VestingPosition {
   totalAmount: BigNumberish;
   claimedAmount: BigNumberish;
   start: number;
-  end: number;
+  duration: number;
 }
 
 export interface AddClaimInput {

@@ -19,7 +19,7 @@ contract AllocationModule {
         uint96 claimedAmount;
         /// @dev Timestamp when this vesting position started.
         uint32 start;
-        /// @dev How long after vesting start must be waited before claiming the total amount.
+        /// @dev Timespan between vesting start and end.
         uint32 duration;
     }
 

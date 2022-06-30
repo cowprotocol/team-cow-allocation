@@ -73,3 +73,12 @@ It will be associated with the mainnet team controller address automatically.
 
 This contract is designed to be a module for a Gnosis Safe, and before using it it needs to be activated in the controller safe.
 Running the command above will print to screen instructions on how to enable the module.
+
+## Verify deployed contract on Etherscan
+
+After obtaining an Etherscan API key, run:
+
+```sh
+export ETHERSCAN_API_KEY=your key here
+yarn verify:etherscan --network mainnet
+```

@@ -18,7 +18,6 @@ interface DeploymentRecord {
 const updateNetworks: DeployFunction = async function ({
   deployments,
   getChainId,
-  ethers,
   network,
 }: HardhatRuntimeEnvironment) {
   if (network.name === "hardhat" || network.name === "localhost") {
@@ -28,9 +27,23 @@ const updateNetworks: DeployFunction = async function ({
   console.log("updating 'networks.json'...");
 
   const chainId = parseInt(await getChainId());
-  const networks: Networks = JSON.parse(
-    await fs.readFile(NETWORKS_PATH, "utf-8"),
-  );
+
+  let networkFileContent;
+  const FILE_DOES_NOT_EXIST = "ENOENT";
+  try {
+    networkFileContent = await fs.readFile(NETWORKS_PATH, "utf-8");
+  } catch (e) {
+    if (
+      e !== null &&
+      typeof e === "object" &&
+      (e as Record<string, unknown>).code === FILE_DOES_NOT_EXIST
+    ) {
+      networkFileContent = "{}";
+    } else {
+      throw e;
+    }
+  }
+  const networks: Networks = JSON.parse(networkFileContent);
 
   const updateRecord = (
     contractName: string,
@@ -50,16 +63,6 @@ const updateNetworks: DeployFunction = async function ({
   for (const [name, deployment] of Object.entries(await deployments.all())) {
     updateRecord(name, deployment);
   }
-
-  const settlementRecord = networks["GPv2Settlement"][chainId];
-  const settlement = await ethers.getContractAt(
-    "GPv2Settlement",
-    settlementRecord.address,
-  );
-  updateRecord("GPv2VaultRelayer", {
-    address: await settlement.vaultRelayer(),
-    transactionHash: settlementRecord.transactionHash,
-  });
 
   await fs.writeFile(NETWORKS_PATH, JSON.stringify(networks, null, INDENT));
 };

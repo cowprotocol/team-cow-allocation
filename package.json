@@ -16,7 +16,8 @@
     "test": "hardhat test",
     "test:ignored-in-coverage": "MOCHA_CONF='ignored in coverage' hardhat test",
     "test:mainnet": "MOCHA_CONF='mainnet' hardhat test",
-    "test:no-mainnet": "MOCHA_CONF='no mainnet' hardhat test"
+    "test:no-mainnet": "MOCHA_CONF='no mainnet' hardhat test",
+    "verify:etherscan": "hardhat etherscan-verify --license LGPL-3.0 --force-license"
   },
   "main": "lib/commonjs/index.js",
   "module": "lib/esm/index.js",

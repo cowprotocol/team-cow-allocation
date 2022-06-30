@@ -16,7 +16,8 @@
     "test": "hardhat test",
     "test:ignored-in-coverage": "MOCHA_CONF='ignored in coverage' hardhat test",
     "test:mainnet": "MOCHA_CONF='mainnet' hardhat test",
-    "test:no-mainnet": "MOCHA_CONF='no mainnet' hardhat test"
+    "test:no-mainnet": "MOCHA_CONF='no mainnet' hardhat test",
+    "verify:etherscan": "hardhat etherscan-verify --license LGPL-3.0 --force-license"
   },
   "main": "lib/commonjs/index.js",
   "module": "lib/esm/index.js",
@@ -40,7 +41,7 @@
     "@types/mocha": "^9.1.0",
     "@types/node": "^17.0.23",
     "@types/yargs": "^17.0.10",
-    "@typescript-eslint/eslint-plugin": "^5.18.0",
+    "@typescript-eslint/eslint-plugin": "^5.30.0",
     "@typescript-eslint/parser": "^5.18.0",
     "canonical-weth": "^1.4.0",
     "chai": "^4.3.6",

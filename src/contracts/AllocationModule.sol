@@ -222,7 +222,7 @@ contract AllocationModule {
     /// Given the parameters of a vesting position, computes how much of the total amount has been vested so far.
     /// @param start Timestamp when the vesting position was started.
     /// @param current Timestamp of the point in time when the vested amount should be computed.
-    /// @param duration How long it takes for this vesting position to be fully vested.
+    /// @param duration How long it takes for this ` position to be fully vested.
     /// @param totalAmount The total amount that is being vested.
     /// @return The amount that has been vested at the specified point in time.
     function computeClaimableAmount(

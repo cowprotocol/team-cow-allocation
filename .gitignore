@@ -7,3 +7,4 @@ node_modules/
 yarn-error.log
 *.tgz
 .env
+/add_vesting_tx_builder.json

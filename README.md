@@ -82,3 +82,24 @@ After obtaining an Etherscan API key, run:
 export ETHERSCAN_API_KEY=your key here
 yarn verify:etherscan --network mainnet
 ```
+
+## Add vesting
+
+This repository provides a script to create new vesting position from a CSV file describing the allocations.
+The script outputs a file that is compatible with the Safe transaction builder app and can be imported in the team controller safe context for execution. 
+
+```sh
+npx hardhat start-vesting --network mainnet --csv ./vesting_positions.csv
+```
+
+The format of the CSV file is as follows:
+
+```csv
+Address,Number of Tokens,Start Date,Duration (days)
+0x1111111111111111111111111111111111111111,4000000,1 January 2021,1460
+0x2222222222222222222222222222222222222222,2000000,2. February 2022,1095
+```
+
+Note that the date format is anything supported by Javascript's `Date`.
+
+Try `npx hardhat start-vesting --help` for more options.

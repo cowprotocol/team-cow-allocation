@@ -1,2 +1,5 @@
-// eslint-disable-next-line @typescript-eslint/no-empty-function
-export function setupTasks(): void {}
+import { setupStartVestingTask } from "./startVesting";
+
+export function setupTasks(): void {
+  setupStartVestingTask();
+}

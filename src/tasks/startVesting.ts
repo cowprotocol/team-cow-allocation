@@ -74,7 +74,7 @@ async function startVesting(
   const txBuilderFileContent = generateTxBuilderFileContent(transactions, {
     name: "Start Vesting Transactions Batch",
     description:
-      "A transacion that batches together multiple calls to the allocation modules for starting vesting positions",
+      "A transaction that batches together multiple calls to the allocation modules for starting vesting positions",
     originSafe: contracts.teamController.address,
     chainId: (await hre.ethers.provider.getNetwork()).chainId,
   });

@@ -4,7 +4,7 @@
  * There should be no change except formatting, exports, using ethers for keccak, and hardcoding the version number.
  * Pointer to relevant original files:
  * - https://raw.githubusercontent.com/safe-global/safe-react-apps/547337cba6e4824cf987226793691f6f88386f21/apps/tx-builder/src/typings/models.ts
- * - https://github.com/safe-global/safe-react-apps/blob/development/apps/tx-builder/src/store/transactionLibraryContext.tsx#L256-L282
+ * - https://raw.githubusercontent.com/safe-global/safe-react-apps/547337cba6e4824cf987226793691f6f88386f21/apps/tx-builder/src/store/transactionLibraryContext.tsx#L256-L282
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

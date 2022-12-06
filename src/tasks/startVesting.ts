@@ -71,13 +71,15 @@ async function startVesting(
     ),
   );
 
-  const txBuilderFileContent = generateTxBuilderFileContent(transactions, {
-    name: "Start Vesting Transactions Batch",
-    description:
-      "A transaction that batches together multiple calls to the allocation modules for starting vesting positions",
-    originSafe: contracts.teamController.address,
-    chainId: (await hre.ethers.provider.getNetwork()).chainId,
-  });
+  const txBuilderFileContent = await generateTxBuilderFileContent(
+    transactions,
+    {
+      name: "Start Vesting Transactions Batch",
+      description:
+        "A transaction that batches together multiple calls to the allocation modules for starting vesting positions",
+      chainId: (await hre.ethers.provider.getNetwork()).chainId,
+    },
+  );
   await fs.writeFile(
     outputFilePath,
     JSON.stringify(txBuilderFileContent, undefined, 2),

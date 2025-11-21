@@ -101,6 +101,11 @@ export default {
       ...sharedNetworkConfig,
       chainId: 1,
     },
+    sepolia: {
+      url: `https://sepolia.infura.io/v3/${INFURA_KEY}`,
+      ...sharedNetworkConfig,
+      chainId: 11155111,
+    },
   },
   namedAccounts: {
     // Note: accounts defined by a number refer to the the accounts as configured

@@ -69,7 +69,7 @@ export INFURA_KEY='your infura key here'
 yarn deploy --network mainnet
 ```
 
-It will be associated with the mainnet team controller address automatically.
+It will be associated with the mainnet team controller address automatically. The corresponding addresses can be found in `./src/ts/constants.ts`.
 
 This contract is designed to be a module for a Gnosis Safe, and before using it it needs to be activated in the controller safe.
 Running the command above will print to screen instructions on how to enable the module.

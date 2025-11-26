@@ -40,7 +40,7 @@ describe("AllocationModule", () => {
     address: string;
   };
   const cow = { address: utils.getAddress("0x" + "0ca0".repeat(10)) };
-  let vcow: Contract;
+  let vcow: MockContract;
   const cowIface: Interface = new Interface(IERC20.abi);
   const vcowIface: Interface = new Interface(VCOW_ABI);
   let AllocationModuleFactory: ContractFactory;

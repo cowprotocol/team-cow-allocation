@@ -1,5 +1,6 @@
 import IERC20 from "@openzeppelin/contracts/build/contracts/IERC20Metadata.json";
 import { expect } from "chai";
+import { MockContract } from "ethereum-waffle";
 import { BigNumberish, Contract, ContractFactory, utils } from "ethers";
 import { ethers, waffle } from "hardhat";
 
@@ -18,7 +19,7 @@ const [, deployer, owner, claimant] = waffle.provider.getWallets();
 describe("AllocationModule interaction with controller safe", () => {
   let allocationModule: Contract;
   let controller: Contract;
-  let cow: Contract;
+  let cow: MockContract;
   let vcow: Contract;
   let AllocationModuleFactory: ContractFactory;
   let safeManager: GnosisSafeManager;

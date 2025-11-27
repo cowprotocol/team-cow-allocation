@@ -165,7 +165,7 @@ function testModule({
 
       expect(await safe.isModuleEnabled(allocationModule.address)).to.be.true;
 
-      // Allocate claim to first employee.
+      // Allocate claim to first user.
       const durationOne = 400 * 24 * 3600; // 400 days
       const amountOne = utils.parseUnits("31337", 18);
       const startClaimOne =

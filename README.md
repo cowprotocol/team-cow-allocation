@@ -65,7 +65,7 @@ REPORT_GAS=1 yarn test
 The contract can be deployed on mainnet by running:
 
 ```sh
-export INFURA_KEY='your infura key here'
+export NODE_URL='your node RPC URL here'
 yarn deploy --network mainnet
 ```
 

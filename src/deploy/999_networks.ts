@@ -1,19 +1,14 @@
 import { promises as fs } from "fs";
 import path from "path";
 
-import { DeployFunction } from "hardhat-deploy/types";
+import { DeployFunction, Deployment } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 const NETWORKS_PATH = path.join(__dirname, "../../networks.json");
 const INDENT = "  ";
 
 type Networks = Record<string, Network>;
-type Network = Record<number, DeploymentRecord>;
-
-interface DeploymentRecord {
-  address: string;
-  transactionHash?: string;
-}
+type Network = Record<number, Deployment>;
 
 const updateNetworks: DeployFunction = async function ({
   deployments,
@@ -47,11 +42,13 @@ const updateNetworks: DeployFunction = async function ({
 
   const updateRecord = (
     contractName: string,
-    { address, transactionHash }: DeploymentRecord,
+    { address, transactionHash, numDeployments }: Deployment,
   ) => {
-    networks[contractName] = networks[contractName] || {};
-    const record = (networks[contractName][chainId] = {
-      ...networks[contractName][chainId],
+    const identifier =
+      numDeployments === 1 ? contractName : `${contractName}-${numDeployments}`;
+    networks[identifier] = networks[identifier] || {};
+    const record = (networks[identifier][chainId] = {
+      ...networks[identifier][chainId],
       address,
     });
 

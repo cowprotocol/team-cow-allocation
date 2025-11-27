@@ -19,6 +19,9 @@ import {
   CONTRACT_NAME,
   buildEnableModuleTx,
   addClaimInput,
+  COW_DAO,
+  TEAM_ALLOCATION_DEPLOYMENT_NAME,
+  DAO_ALLOCATION_DEPLOYMENT_NAME,
 } from "../../src/ts";
 import { Operation } from "../../src/ts/lib/safe";
 import { customError } from "../lib/custom-errors";
@@ -71,175 +74,198 @@ async function execSafeTransaction(
   return await executeTx(safe, safeTransaction, sigs);
 }
 
-const [employeeOne, employeeTwo] = waffle.provider.getWallets();
+const [userOne, userTwo] = waffle.provider.getWallets();
 
-describe("Mainnet: allocation module on team safe", () => {
-  let allocationModule: Contract;
-  let cow: Contract;
-  let vcow: Contract;
-  let teamManager: Contract;
-  let teamManagerOwnerAddress: string;
-  let teamManagerOwner: SignerWithAddress;
+interface MainnetTestParam {
+  name: string;
+  deployment: string;
+  safe: string;
+  forkBlock: number;
+}
+function testModule({
+  name,
+  deployment,
+  safe: safeAddress,
+  forkBlock,
+}: MainnetTestParam) {
+  describe(`Mainnet: allocation module on ${name}`, () => {
+    let allocationModule: Contract;
+    let cow: Contract;
+    let vcow: Contract;
+    let safe: Contract;
+    let safeOwnerAddress: string;
+    let safeOwner: SignerWithAddress;
 
-  before(async function () {
-    await forkMainnet(hre);
+    before(async function () {
+      await forkMainnet(hre, forkBlock);
 
-    teamManager = new Contract(TEAM_CONTROLLER_SAFE, GnosisSafe.abi).connect(
-      hre.ethers.provider,
-    );
-    cow = new Contract(COW_TOKEN, IERC20.abi).connect(hre.ethers.provider);
-    vcow = new Contract(VIRTUAL_COW_TOKEN, IERC20.abi).connect(
-      hre.ethers.provider,
-    );
-
-    teamManagerOwnerAddress = (await teamManager.getOwners())[0];
-  });
-
-  after(async function () {
-    await stopMainnetFork(hre);
-  });
-
-  beforeEach(async function () {
-    await resetMainnetFork(hre);
-    // Set threshold to one, so that a transaction can directly be executed by a single owner
-    await setSafeThresholdToOne(teamManager, hre);
-    await hre.network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [teamManagerOwnerAddress],
-    });
-    teamManagerOwner = await hre.ethers.getSigner(teamManagerOwnerAddress);
-
-    // Use hardhat-deploy to deploy on mainnet.
-    const { AllocationModule } = await deployments.fixture();
-    allocationModule = await ethers.getContractAt(
-      CONTRACT_NAME,
-      AllocationModule.address,
-    );
-  });
-
-  it("distributes COW tokens to registered beneficiaries", async function () {
-    // Generic executor that pre-fills tx with default values
-    const teamExecTx = (
-      tx: Pick<MetaTransaction, "data"> & Partial<MetaTransaction>,
-    ) =>
-      execSafeTransaction(
-        teamManager.connect(teamManagerOwner),
-        {
-          value: 0,
-          operation: Operation.Call,
-          to: allocationModule.address,
-          ...tx,
-        },
-        teamManagerOwner,
+      safe = new Contract(safeAddress, GnosisSafe.abi).connect(
+        hre.ethers.provider,
       );
-    const teamExecInModule = (fnName: string, params: unknown[]) =>
-      teamExecTx({
-        data: allocationModule.interface.encodeFunctionData(fnName, params),
+      cow = new Contract(COW_TOKEN, IERC20.abi).connect(hre.ethers.provider);
+      vcow = new Contract(VIRTUAL_COW_TOKEN, IERC20.abi).connect(
+        hre.ethers.provider,
+      );
+
+      safeOwnerAddress = (await safe.getOwners())[0];
+    });
+
+    after(async function () {
+      await stopMainnetFork(hre);
+    });
+
+    beforeEach(async function () {
+      await resetMainnetFork(hre);
+      // Set threshold to one, so that a transaction can directly be executed by a single owner
+      await setSafeThresholdToOne(safe, hre);
+      await hre.network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [safeOwnerAddress],
       });
+      safeOwner = await hre.ethers.getSigner(safeOwnerAddress);
 
-    // Test assumption: the team manager holds enough vCow to make this test pass. This will likely not be true in the
-    // future after most team vCOW has been allocated. On the other hand, these tests won't be needed anymore.
-    const initialTeamManagerCow = await cow.balanceOf(teamManager.address);
-    const initialTeamManagerVcow = await vcow.balanceOf(teamManager.address);
+      // Use hardhat-deploy to deploy on mainnet.
+      const fixture = await deployments.fixture();
+      allocationModule = await ethers.getContractAt(
+        CONTRACT_NAME,
+        fixture[deployment].address,
+      );
+    });
 
-    // Enable module in team safe.
-    await teamExecTx(await buildEnableModuleTx(allocationModule));
+    it("distributes COW tokens to registered beneficiaries", async function () {
+      // Generic executor that pre-fills tx with default values
+      const teamExecTx = (
+        tx: Pick<MetaTransaction, "data"> & Partial<MetaTransaction>,
+      ) =>
+        execSafeTransaction(
+          safe.connect(safeOwner),
+          {
+            value: 0,
+            operation: Operation.Call,
+            to: allocationModule.address,
+            ...tx,
+          },
+          safeOwner,
+        );
+      const teamExecInModule = (fnName: string, params: unknown[]) =>
+        teamExecTx({
+          data: allocationModule.interface.encodeFunctionData(fnName, params),
+        });
+      const totalSafeBalance = async () => {
+        return (await vcow.balanceOf(safe.address)).add(
+          await cow.balanceOf(safe.address),
+        );
+      };
 
-    expect(await teamManager.isModuleEnabled(allocationModule.address)).to.be
-      .true;
+      // Test assumption: the safe holds enough vCOW or COW to make this test
+      // pass. This depends on the fork block number.
+      const initialSafeBalance = await totalSafeBalance();
 
-    // Allocate claim to first employee.
-    const durationOne = 400 * 24 * 3600; // 400 days
-    const amountOne = utils.parseUnits("31337", 18);
-    const startClaimOne =
-      (await ethers.provider.getBlock("latest")).timestamp + 31337;
-    await teamExecInModule(
-      "addClaim",
-      addClaimInput({
-        beneficiary: employeeOne.address,
-        start: startClaimOne,
-        duration: durationOne,
-        amount: amountOne,
-      }),
-    );
+      // Enable module in team safe.
+      await teamExecTx(await buildEnableModuleTx(allocationModule));
 
-    // Claims nothing before start
-    await setTimeAndMineBlock(startClaimOne - 1337);
-    expect(await allocationModule.callStatic.claimAllCow()).to.equal(
-      constants.AddressZero,
-    );
+      expect(await safe.isModuleEnabled(allocationModule.address)).to.be.true;
 
-    // Employee one claims for the first time.
-    await setTimeAndMineBlock(startClaimOne + durationOne / 8);
-    const claimableAmountOne = amountOne.div(8);
-    expect(await allocationModule.callStatic.claimAllCow()).to.equal(
-      claimableAmountOne,
-    );
-    // Trying to claim an amount that is too large.
-    // Note: cannot use claimableAmountOne.add(1) as mining a new block for the transaction increases the time.
-    await expect(
-      allocationModule.connect(employeeOne).claimCow(amountOne),
-    ).to.be.revertedWith(customError("NotEnoughVestedTokens"));
-    await allocationModule.connect(employeeOne).claimCow(claimableAmountOne);
-    expect(await cow.balanceOf(employeeOne.address)).to.equal(
-      claimableAmountOne,
-    );
-    expect(await cow.balanceOf(teamManager.address)).to.equal(
-      initialTeamManagerCow,
-    );
-    expect(await vcow.balanceOf(teamManager.address)).to.equal(
-      initialTeamManagerVcow.sub(claimableAmountOne),
-    );
+      // Allocate claim to first user.
+      const durationOne = 400 * 24 * 3600; // 400 days
+      const amountOne = utils.parseUnits("31337", 18);
+      const startClaimOne =
+        (await ethers.provider.getBlock("latest")).timestamp + 31337;
+      await teamExecInModule(
+        "addClaim",
+        addClaimInput({
+          beneficiary: userOne.address,
+          start: startClaimOne,
+          duration: durationOne,
+          amount: amountOne,
+        }),
+      );
 
-    // Add claim for second employee.
-    const startClaimTwo = startClaimOne + durationOne / 4;
-    const durationTwo = 200 * 24 * 3600; // 200 days (ends before claim one, at durationOne*3/4)
-    const amountTwo = utils.parseUnits("1337", 18);
-    await teamExecInModule(
-      "addClaim",
-      addClaimInput({
-        beneficiary: employeeTwo.address,
-        start: startClaimTwo,
-        duration: durationTwo,
-        amount: amountTwo,
-      }),
-    );
+      // Claims nothing before start
+      await setTimeAndMineBlock(startClaimOne - 1337);
+      expect(await allocationModule.callStatic.claimAllCow()).to.equal(
+        constants.AddressZero,
+      );
 
-    // Stop vesting for employee one.
-    await setTime(startClaimOne + durationOne / 2);
-    await teamExecInModule("stopClaim", [employeeOne.address]);
-    expect(await cow.balanceOf(employeeOne.address)).to.equal(amountOne.div(2));
-    expect(await cow.balanceOf(teamManager.address)).to.equal(
-      initialTeamManagerCow,
-    );
-    let vcowClaimedSoFar = amountOne.div(2);
-    expect(await vcow.balanceOf(teamManager.address)).to.equal(
-      initialTeamManagerVcow.sub(vcowClaimedSoFar),
-    );
-    await setTimeAndMineBlock(startClaimOne + (durationOne * 5) / 8);
-    await expect(
-      allocationModule.connect(employeeOne).claimAllCow(),
-    ).to.be.revertedWith(customError("NoClaimAssigned"));
+      // User one claims for the first time.
+      await setTimeAndMineBlock(startClaimOne + durationOne / 8);
+      const claimableAmountOne = amountOne.div(8);
+      expect(await allocationModule.callStatic.claimAllCow()).to.equal(
+        claimableAmountOne,
+      );
+      // Trying to claim an amount that is too large.
+      // Note: cannot use claimableAmountOne.add(1) as mining a new block for the transaction increases the time.
+      await expect(
+        allocationModule.connect(userOne).claimCow(amountOne),
+      ).to.be.revertedWith(customError("NotEnoughVestedTokens"));
+      await allocationModule.connect(userOne).claimCow(claimableAmountOne);
+      expect(await cow.balanceOf(userOne.address)).to.equal(claimableAmountOne);
 
-    // Employee two claims everything.
-    await setTimeAndMineBlock(startClaimOne + (durationOne * 3) / 4);
-    expect(
-      await allocationModule.connect(employeeTwo).callStatic.claimAllCow(),
-    ).to.equal(amountTwo);
-    await allocationModule.connect(employeeTwo).claimAllCow();
-    expect(await cow.balanceOf(employeeTwo.address)).to.equal(amountTwo);
-    expect(await cow.balanceOf(teamManager.address)).to.equal(
-      initialTeamManagerCow,
-    );
-    vcowClaimedSoFar = vcowClaimedSoFar.add(amountTwo);
-    expect(await vcow.balanceOf(teamManager.address)).to.equal(
-      initialTeamManagerVcow.sub(vcowClaimedSoFar),
-    );
+      expect(await totalSafeBalance()).to.equal(
+        initialSafeBalance.sub(claimableAmountOne),
+      );
 
-    // Employee two cannot claim anymore, now that its claim has been redeemed in full.
-    await setTimeAndMineBlock(startClaimOne + 42 * durationOne);
-    await expect(
-      await allocationModule.connect(employeeTwo).callStatic.claimAllCow(),
-    ).to.equal(constants.Zero);
+      // Add claim for second user.
+      const startClaimTwo = startClaimOne + durationOne / 4;
+      const durationTwo = 200 * 24 * 3600; // 200 days (ends before claim one, at durationOne*3/4)
+      const amountTwo = utils.parseUnits("1337", 18);
+      await teamExecInModule(
+        "addClaim",
+        addClaimInput({
+          beneficiary: userTwo.address,
+          start: startClaimTwo,
+          duration: durationTwo,
+          amount: amountTwo,
+        }),
+      );
+
+      // Stop vesting for user one.
+      await setTime(startClaimOne + durationOne / 2);
+      await teamExecInModule("stopClaim", [userOne.address]);
+      expect(await cow.balanceOf(userOne.address)).to.equal(amountOne.div(2));
+      let vcowClaimedSoFar = amountOne.div(2);
+      expect(await totalSafeBalance()).to.equal(
+        initialSafeBalance.sub(vcowClaimedSoFar),
+      );
+      await setTimeAndMineBlock(startClaimOne + (durationOne * 5) / 8);
+      await expect(
+        allocationModule.connect(userOne).claimAllCow(),
+      ).to.be.revertedWith(customError("NoClaimAssigned"));
+
+      // User two claims everything.
+      await setTimeAndMineBlock(startClaimOne + (durationOne * 3) / 4);
+      expect(
+        await allocationModule.connect(userTwo).callStatic.claimAllCow(),
+      ).to.equal(amountTwo);
+      await allocationModule.connect(userTwo).claimAllCow();
+      expect(await cow.balanceOf(userTwo.address)).to.equal(amountTwo);
+      vcowClaimedSoFar = vcowClaimedSoFar.add(amountTwo);
+      expect(await totalSafeBalance()).to.equal(
+        initialSafeBalance.sub(vcowClaimedSoFar),
+      );
+
+      // User two cannot claim anymore, now that its claim has been redeemed in full.
+      await setTimeAndMineBlock(startClaimOne + 42 * durationOne);
+      await expect(
+        await allocationModule.connect(userTwo).callStatic.claimAllCow(),
+      ).to.equal(constants.Zero);
+    });
   });
+}
+
+// The involved safes need to have enough COW/vCOW to make the test pass at this block.
+const MAINNET_BLOCK = 23890068;
+
+testModule({
+  name: "team allocation",
+  deployment: TEAM_ALLOCATION_DEPLOYMENT_NAME,
+  safe: TEAM_CONTROLLER_SAFE,
+  forkBlock: MAINNET_BLOCK,
+});
+
+testModule({
+  name: "COW DAO allocation",
+  deployment: DAO_ALLOCATION_DEPLOYMENT_NAME,
+  safe: COW_DAO,
+  forkBlock: MAINNET_BLOCK,
 });

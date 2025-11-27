@@ -3,15 +3,15 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import {
-  CONTRACT_NAME,
+  DAO_ALLOCATION_DEPLOYMENT_NAME,
   constructorInput,
-  TEAM_CONTROLLER_SAFE,
+  COW_DAO,
   VIRTUAL_COW_TOKEN,
   buildEnableModuleTx,
-  TEAM_ALLOCATION_DEPLOYMENT_NAME,
+  CONTRACT_NAME,
 } from "../ts";
 
-const deployAuthenticator: DeployFunction = async function ({
+const deployCowDaoAuthenticator: DeployFunction = async function ({
   deployments,
   getNamedAccounts,
   ethers,
@@ -19,19 +19,19 @@ const deployAuthenticator: DeployFunction = async function ({
   const { deployer } = await getNamedAccounts();
   const { deploy, log } = deployments;
 
-  const { address, abi } = await deploy(TEAM_ALLOCATION_DEPLOYMENT_NAME, {
+  const { address, abi } = await deploy(DAO_ALLOCATION_DEPLOYMENT_NAME, {
     contract: CONTRACT_NAME,
     from: deployer,
     gasLimit: 2000000,
     log: true,
     args: constructorInput({
-      controller: TEAM_CONTROLLER_SAFE,
+      controller: COW_DAO,
       virtualCowToken: VIRTUAL_COW_TOKEN,
     }),
   });
 
   log(
-    "To enable this module in the team controller safe, execute a transaction with the following parameters on the team controller safe:",
+    "To enable this module in the CoW DAO safe, execute a transaction with the following parameters on CoW DAO:",
   );
   const enableTx = await buildEnableModuleTx(
     new Contract(address, abi).connect(ethers.provider),
@@ -41,4 +41,4 @@ const deployAuthenticator: DeployFunction = async function ({
   log(`Data: ${enableTx.data}`);
 };
 
-export default deployAuthenticator;
+export default deployCowDaoAuthenticator;

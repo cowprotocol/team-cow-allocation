@@ -46,12 +46,12 @@ const updateNetworks: DeployFunction = async function ({
   const networks: Networks = JSON.parse(networkFileContent);
 
   const updateRecord = (
-    contractName: string,
+    deploymentName: string,
     { address, transactionHash }: DeploymentRecord,
   ) => {
-    networks[contractName] = networks[contractName] || {};
-    const record = (networks[contractName][chainId] = {
-      ...networks[contractName][chainId],
+    networks[deploymentName] = networks[deploymentName] || {};
+    const record = (networks[deploymentName][chainId] = {
+      ...networks[deploymentName][chainId],
       address,
     });
 

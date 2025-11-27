@@ -3,11 +3,12 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import {
-  DAO_ALLOCATION_CONTRACT_NAME,
+  DAO_ALLOCATION_DEPLOYMENT_NAME,
   constructorInput,
   COW_DAO,
   VIRTUAL_COW_TOKEN,
   buildEnableModuleTx,
+  CONTRACT_NAME,
 } from "../ts";
 
 const deployCowDaoAuthenticator: DeployFunction = async function ({
@@ -18,7 +19,8 @@ const deployCowDaoAuthenticator: DeployFunction = async function ({
   const { deployer } = await getNamedAccounts();
   const { deploy, log } = deployments;
 
-  const { address, abi } = await deploy(DAO_ALLOCATION_CONTRACT_NAME, {
+  const { address, abi } = await deploy(DAO_ALLOCATION_DEPLOYMENT_NAME, {
+    contract: CONTRACT_NAME,
     from: deployer,
     gasLimit: 2000000,
     log: true,

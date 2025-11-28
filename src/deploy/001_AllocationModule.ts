@@ -8,6 +8,7 @@ import {
   TEAM_CONTROLLER_SAFE,
   VIRTUAL_COW_TOKEN,
   buildEnableModuleTx,
+  TEAM_ALLOCATION_DEPLOYMENT_NAME,
 } from "../ts";
 
 const deployAuthenticator: DeployFunction = async function ({
@@ -18,7 +19,8 @@ const deployAuthenticator: DeployFunction = async function ({
   const { deployer } = await getNamedAccounts();
   const { deploy, log } = deployments;
 
-  const { address, abi } = await deploy(CONTRACT_NAME, {
+  const { address, abi } = await deploy(TEAM_ALLOCATION_DEPLOYMENT_NAME, {
+    contract: CONTRACT_NAME,
     from: deployer,
     gasLimit: 2000000,
     log: true,

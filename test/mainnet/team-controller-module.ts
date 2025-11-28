@@ -20,7 +20,8 @@ import {
   buildEnableModuleTx,
   addClaimInput,
   COW_DAO,
-  DAO_ALLOCATION_CONTRACT_NAME,
+  TEAM_ALLOCATION_DEPLOYMENT_NAME,
+  DAO_ALLOCATION_DEPLOYMENT_NAME,
 } from "../../src/ts";
 import { Operation } from "../../src/ts/lib/safe";
 import { customError } from "../lib/custom-errors";
@@ -77,13 +78,13 @@ const [userOne, userTwo] = waffle.provider.getWallets();
 
 interface MainnetTestParam {
   name: string;
-  contract: string;
+  deployment: string;
   safe: string;
   forkBlock: number;
 }
 function testModule({
   name,
-  contract,
+  deployment,
   safe: safeAddress,
   forkBlock,
 }: MainnetTestParam) {
@@ -126,8 +127,8 @@ function testModule({
       // Use hardhat-deploy to deploy on mainnet.
       const fixture = await deployments.fixture();
       allocationModule = await ethers.getContractAt(
-        contract,
-        fixture[contract].address,
+        CONTRACT_NAME,
+        fixture[deployment].address,
       );
     });
 
@@ -257,14 +258,14 @@ const MAINNET_BLOCK = 23890068;
 
 testModule({
   name: "team allocation",
-  contract: CONTRACT_NAME,
+  deployment: TEAM_ALLOCATION_DEPLOYMENT_NAME,
   safe: TEAM_CONTROLLER_SAFE,
   forkBlock: MAINNET_BLOCK,
 });
 
 testModule({
   name: "COW DAO allocation",
-  contract: DAO_ALLOCATION_CONTRACT_NAME,
+  deployment: DAO_ALLOCATION_DEPLOYMENT_NAME,
   safe: COW_DAO,
   forkBlock: MAINNET_BLOCK,
 });

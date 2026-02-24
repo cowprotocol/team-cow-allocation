@@ -2,7 +2,7 @@
 
 The allocation module distributes COW and vCOW tokens from a Safe multisig.
 
-This module has two known use cases:
+This module is currently used for two different purposes:
 - Send vCOW tokens that were allocated to the CoW Protocol team safe to current and future contributors.
 - Directly send COW tokens from the CoW DAO through a DAO proposal.
 

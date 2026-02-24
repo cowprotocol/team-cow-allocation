@@ -19,7 +19,7 @@ import {
   CONTRACT_NAME,
   buildEnableModuleTx,
   addClaimInput,
-  COW_DAO,
+  COW_DAO_SAFE,
   TEAM_ALLOCATION_DEPLOYMENT_NAME,
   DAO_ALLOCATION_DEPLOYMENT_NAME,
 } from "../../src/ts";
@@ -266,6 +266,6 @@ testModule({
 testModule({
   name: "COW DAO allocation",
   deployment: DAO_ALLOCATION_DEPLOYMENT_NAME,
-  safe: COW_DAO,
+  safe: COW_DAO_SAFE,
   forkBlock: MAINNET_BLOCK,
 });

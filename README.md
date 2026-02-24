@@ -2,7 +2,7 @@
 
 The allocation module distributes COW and vCOW tokens from a Safe multisig.
 
-This module has two known use cases:
+This module is currently used for two different purposes:
 - Send vCOW tokens that were allocated to the CoW Protocol team safe to current and future contributors.
 - Directly send COW tokens from the CoW DAO through a DAO proposal.
 
@@ -74,6 +74,7 @@ yarn deploy --network mainnet
 ```
 
 It will be associated with the mainnet safe address automatically.
+The address is defined in the file [`src/ts/constants.ts`](src/ts/constants.ts).
 
 This contract is designed to be a module for a Gnosis Safe, and before using it it needs to be activated in the controller safe.
 Running the command above will print to screen instructions on how to enable the module.

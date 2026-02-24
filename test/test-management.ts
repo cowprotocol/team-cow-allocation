@@ -8,17 +8,8 @@ export enum TestConfigs {
   NoMainnet = "no mainnet",
 }
 
-const fixCoverageOptimizerDetails = {
-  yul: true,
-  yulDetails: {
-    stackAllocation: true,
-  },
-} as const;
-
 export interface TestOptions {
   mocha: MochaOptions;
-  initialBaseFeePerGas: number | undefined;
-  optimizerDetails: typeof fixCoverageOptimizerDetails | undefined;
 }
 
 let currentConfig = TestConfigs.RunAll;
@@ -26,9 +17,6 @@ const regexpIgnoredOnCoverage = /\[skip-in-coverage\]/;
 
 export function setupTestConfigs(config: string | undefined): TestOptions {
   const mocha: MochaOptions = {};
-  let optimizerDetails: typeof fixCoverageOptimizerDetails | undefined =
-    undefined;
-  let initialBaseFeePerGas: number | undefined = undefined;
   switch (config) {
     case undefined:
       currentConfig = TestConfigs.RunAll;
@@ -36,12 +24,6 @@ export function setupTestConfigs(config: string | undefined): TestOptions {
     case TestConfigs.Coverage:
       currentConfig = TestConfigs.Coverage;
       mocha.grep = /^(?!Mainnet)/;
-      // Note: unit is Wei, not GWei. This is a workaround to make the coverage
-      // tool work with the London hardfork.
-      initialBaseFeePerGas = 1;
-      // Fixes stack too deep error when compiling contracts in coverage.
-      // https://github.com/ethereum/solidity/issues/10354
-      optimizerDetails = fixCoverageOptimizerDetails;
       break;
     case TestConfigs.IgnoredInCoverage:
       currentConfig = TestConfigs.IgnoredInCoverage;
@@ -58,7 +40,7 @@ export function setupTestConfigs(config: string | undefined): TestOptions {
     default:
       throw new Error(`Invalid test config string ${config}`);
   }
-  return { mocha, initialBaseFeePerGas, optimizerDetails };
+  return { mocha };
 }
 
 // Note: to use this function, Mocha's "this context" must be available to the

@@ -64,8 +64,7 @@ if (GAS_PRICE_GWEI) {
     .toNumber();
 }
 
-const { mocha, initialBaseFeePerGas, optimizerDetails } =
-  setupTestConfigs(MOCHA_CONF);
+const { mocha } = setupTestConfigs(MOCHA_CONF);
 
 setupTasks();
 
@@ -85,7 +84,6 @@ export default {
           optimizer: {
             enabled: true,
             runs: 1000000,
-            details: optimizerDetails,
           },
         },
       },
@@ -94,12 +92,16 @@ export default {
   networks: {
     hardhat: {
       blockGasLimit: 12.5e6,
-      initialBaseFeePerGas,
     },
     mainnet: {
       url: `https://mainnet.infura.io/v3/${INFURA_KEY}`,
       ...sharedNetworkConfig,
       chainId: 1,
+    },
+    sepolia: {
+      url: `https://sepolia.infura.io/v3/${INFURA_KEY}`,
+      ...sharedNetworkConfig,
+      chainId: 11155111,
     },
   },
   namedAccounts: {

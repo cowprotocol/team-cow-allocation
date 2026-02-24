@@ -10,7 +10,10 @@ let snapshotFreshFork: unknown;
 
 // Changes the current testing network to be a fork of mainnet at the latest
 // block.
-export async function forkMainnet(hre: HardhatRuntimeEnvironment) {
+export async function forkMainnet(
+  hre: HardhatRuntimeEnvironment,
+  blockNumber?: number,
+) {
   await hre.network.provider.request({
     method: "hardhat_reset",
     params: [
@@ -21,7 +24,7 @@ export async function forkMainnet(hre: HardhatRuntimeEnvironment) {
           // complete). Until this becomes a requirement, we use our default
           // node for mainnet.
           jsonRpcUrl: (hre.config.networks["mainnet"] as HttpNetworkConfig).url,
-          blockNumber: undefined,
+          blockNumber,
         },
       },
     ],

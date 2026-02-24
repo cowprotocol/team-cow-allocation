@@ -4,5 +4,11 @@
       "address": "0x582A254713b65c140840ade25A692fBe2610682d",
       "transactionHash": "0x5ebb0dd5d3eebe9b5cb9c670f7e5cc1d6e8c4295caef6548e1e2c083060f0cc0"
     }
+  },
+  "CowDaoAllocationModule": {
+    "1": {
+      "address": "0xd2D2946402c60d1C97195fa22eaD21812e1ff25D",
+      "transactionHash": "0x68bf9d00ab29118d45644bb02a528a115b2b2bd9dc2b81079197535a159628dc"
+    }
   }
 }

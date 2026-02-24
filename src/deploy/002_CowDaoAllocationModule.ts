@@ -5,7 +5,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import {
   DAO_ALLOCATION_DEPLOYMENT_NAME,
   constructorInput,
-  COW_DAO,
+  COW_DAO_SAFE,
   VIRTUAL_COW_TOKEN,
   buildEnableModuleTx,
   CONTRACT_NAME,
@@ -25,7 +25,7 @@ const deployCowDaoAuthenticator: DeployFunction = async function ({
     gasLimit: 2000000,
     log: true,
     args: constructorInput({
-      controller: COW_DAO,
+      controller: COW_DAO_SAFE,
       virtualCowToken: VIRTUAL_COW_TOKEN,
     }),
   });

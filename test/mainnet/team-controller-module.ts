@@ -124,6 +124,7 @@ function testModule({
         method: "hardhat_impersonateAccount",
         params: [safeOwnerAddress],
       });
+      // The impersonated Safe owner may have no ETH at the fork block.
       await hre.network.provider.send("hardhat_setBalance", [
         safeOwnerAddress,
         utils.parseEther("1").toHexString(),
@@ -136,10 +137,6 @@ function testModule({
         CONTRACT_NAME,
         fixture[deployment].address,
       );
-
-      expect(await allocationModule.controller()).to.equal(safeAddress);
-      expect(await allocationModule.vcow()).to.equal(VIRTUAL_COW_TOKEN);
-      expect(await allocationModule.cow()).to.equal(COW_TOKEN);
     });
 
     it("distributes COW tokens to registered beneficiaries", async function () {

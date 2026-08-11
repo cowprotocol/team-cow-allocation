@@ -22,6 +22,8 @@ import {
   COW_DAO_SAFE,
   TEAM_ALLOCATION_DEPLOYMENT_NAME,
   DAO_ALLOCATION_DEPLOYMENT_NAME,
+  COW_CONTROLLER_2_ALLOCATION_DEPLOYMENT_NAME,
+  COW_CONTROLLER_2_SAFE,
 } from "../../src/ts";
 import { Operation } from "../../src/ts/lib/safe";
 import { customError } from "../lib/custom-errors";
@@ -122,6 +124,10 @@ function testModule({
         method: "hardhat_impersonateAccount",
         params: [safeOwnerAddress],
       });
+      await hre.network.provider.send("hardhat_setBalance", [
+        safeOwnerAddress,
+        utils.parseEther("1").toHexString(),
+      ]);
       safeOwner = await hre.ethers.getSigner(safeOwnerAddress);
 
       // Use hardhat-deploy to deploy on mainnet.
@@ -130,6 +136,10 @@ function testModule({
         CONTRACT_NAME,
         fixture[deployment].address,
       );
+
+      expect(await allocationModule.controller()).to.equal(safeAddress);
+      expect(await allocationModule.vcow()).to.equal(VIRTUAL_COW_TOKEN);
+      expect(await allocationModule.cow()).to.equal(COW_TOKEN);
     });
 
     it("distributes COW tokens to registered beneficiaries", async function () {
@@ -255,6 +265,9 @@ function testModule({
 
 // The involved safes need to have enough COW/vCOW to make the test pass at this block.
 const MAINNET_BLOCK = 23890068;
+// Controller 2 holds sufficient COW and no vCOW at this block, proving the
+// module's COW-only payout path with deterministic mainnet state.
+const COW_CONTROLLER_2_MAINNET_BLOCK = 25731336;
 
 testModule({
   name: "team allocation",
@@ -268,4 +281,11 @@ testModule({
   deployment: DAO_ALLOCATION_DEPLOYMENT_NAME,
   safe: COW_DAO_SAFE,
   forkBlock: MAINNET_BLOCK,
+});
+
+testModule({
+  name: "COW Controller 2 allocation",
+  deployment: COW_CONTROLLER_2_ALLOCATION_DEPLOYMENT_NAME,
+  safe: COW_CONTROLLER_2_SAFE,
+  forkBlock: COW_CONTROLLER_2_MAINNET_BLOCK,
 });

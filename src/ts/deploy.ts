@@ -1,6 +1,8 @@
 export const CONTRACT_NAME = "AllocationModule";
 export const TEAM_ALLOCATION_DEPLOYMENT_NAME = "AllocationModule";
 export const DAO_ALLOCATION_DEPLOYMENT_NAME = "CowDaoAllocationModule";
+export const COW_CONTROLLER_2_ALLOCATION_DEPLOYMENT_NAME =
+  "CowController2AllocationModule";
 
 export interface DeployArgs {
   controller: string;

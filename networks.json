@@ -10,5 +10,11 @@
       "address": "0xd2D2946402c60d1C97195fa22eaD21812e1ff25D",
       "transactionHash": "0x68bf9d00ab29118d45644bb02a528a115b2b2bd9dc2b81079197535a159628dc"
     }
+  },
+  "CowController2AllocationModule": {
+    "1": {
+      "address": "0x89EC156271a69988D0271cB9743Ca5a8e90033eb",
+      "transactionHash": "0x0f2835182bae39e14744af5edae2b3085b9afdc3bb2e42884ddf9ea14fbd4d40"
+    }
   }
 }

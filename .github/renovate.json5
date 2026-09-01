@@ -3,7 +3,7 @@
 {
   $schema: "https://docs.renovatebot.com/renovate-schema.json",
   // Enable only the package managers used by this repository.
-  enabledManagers: ["github-actions"],
+  enabledManagers: ["github-actions", "npm"],
   // PR titles use Conventional Commits: `deps(<action>): ...`
   semanticCommits: "enabled",
   semanticCommitType: "deps",
@@ -29,6 +29,23 @@
       groupSlug: "github-actions",
       semanticCommitScope: "{{depName}}",
       commitMessageTopic: "{{depName}}",
+    },
+    // Keep all Yarn-managed npm updates in one monthly PR.
+    {
+      matchManagers: ["npm"],
+      schedule: ["* 0-3 1 * *"], // 00:00-03:59 UTC on the first day of each month
+      minimumReleaseAge: "14 days",
+      separateMajorMinor: false,
+      groupName: "npm dependencies",
+      groupSlug: "npm-dependencies",
+      semanticCommitScope: "npm-dependencies",
+      commitMessageTopic: "npm dependencies",
+    },
+    // Major upgrades need an explicit compatibility and supply-chain review.
+    {
+      matchManagers: ["npm"],
+      matchUpdateTypes: ["major"],
+      enabled: false,
     },
   ],
 }
